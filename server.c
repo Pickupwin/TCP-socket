@@ -146,9 +146,9 @@ int main(){
             continue;
         }
         unsigned long long cflen=0ull;
-        while((len=Recv(client_fd, Buf, BUFSIZ))>0){
+        while((len=Recv(client_fd, Buf, (cflen-flen>BUFSIZ)?BUFSIZ:(size_t)(cflen-flen)))>0){
             fwrite(Buf, sizeof(char), len, pFile);
-            cflen+=len;if(cflen>FSIZ)    break;
+            cflen+=len;if(cflen>=flen)  break;
         }
         fclose(pFile);
         unsigned long long rcksum, rflen;

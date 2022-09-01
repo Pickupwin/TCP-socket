@@ -7,7 +7,7 @@
 #include <errno.h>
 
 const uint16_t PORT=2345;
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "10.129.196.139"
 
 char Buf[BUFSIZ];
 
@@ -119,6 +119,8 @@ int main(int argc, char *argv[]){
     while((len=fread(Buf, sizeof(char), BUFSIZ, pFile))>0){
         Send(client_fd, Buf, len);
     }
+    
+    len=Recv(client_fd, Buf, BUFSIZ);Buf[len]='\0';printf("%s\n", Buf);
     
     fclose(pFile);
     

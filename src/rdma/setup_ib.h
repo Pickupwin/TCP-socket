@@ -1,7 +1,7 @@
 #include <infiniband/verbs.h>
 
-const size_t MSG_SIZE=1024u;
-const size_t CUR_MSGS=1u;
+extern const size_t MSG_SIZE;
+extern const size_t CUR_MSGS;
 
 struct IBRes{
     

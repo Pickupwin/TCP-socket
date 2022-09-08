@@ -1,11 +1,13 @@
 #include "debug.h"
 #include "ib.h"
 #include "setup_ib.h"
-#include <string.h>
+#include <stdlib.h>
 
 const size_t NUM_MSGS=1000000u;
 
 int run_server(){
+    
+    printf("server running!\n");
     
     int ret=0, n;
     
@@ -23,6 +25,8 @@ int run_server(){
     char *buf_ptr=ib_res.ib_buf;
     
     for(size_t i=0u;i<NUM_MSGS;++i){
+        if(i%1000u==0u)
+            printf("msg %u\n", i);
         ret=post_recv(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
         check(ret==0, "Failed to post recv");
         for(int flag=1;flag;){
@@ -51,8 +55,9 @@ int main(){
     
     int ret=0;
     
-    ret=setup_ib();
+    ret=setup_ib(1);
     check(ret==0, "Failed to setup IB.");
+    printf("setup_ib OK");
     
     ret=run_server();
     check(ret==0, "Failed to run server.");

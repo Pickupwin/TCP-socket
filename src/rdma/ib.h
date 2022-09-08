@@ -3,6 +3,7 @@
 #include <endian.h>
 #include <byteswap.h>
 #include <infiniband/verbs.h>
+#include <arpa/inet.h>
 
 #include "debug.h"
 

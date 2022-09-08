@@ -6,6 +6,8 @@
 
 int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
     
+    printf("qp_num=%u, lid=%u\n", qp_num, lid);
+    
     int ret=0;
     
     {
@@ -103,7 +105,7 @@ int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_dat
 
 int post_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf){
     int ret=0;
-    struct ibv_recv_wr *bad_send_wr;
+    struct ibv_recv_wr *bad_recv_wr;
     struct ibv_sge list={
         .addr=(uintptr_t)buf,
         .length=req_size,

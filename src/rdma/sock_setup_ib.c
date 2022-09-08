@@ -4,9 +4,14 @@
 #include "debug.h"
 #include "sock.h"
 
+#include <malloc.h>
+
 #define SOCK_SYNC_MSG "sync"
 
-#define SERVER_IP "10.129.196.139"
+const size_t MSG_SIZE=1024u;
+const size_t CUR_MSGS=1u;
+
+#define SERVER_IP "162.105.16.32"
 const uint16_t SOCK_PORT=2345;
 
 struct IBRes ib_res;
@@ -34,14 +39,15 @@ error:
 }
 
 
-int setup_ib(){
+int setup_ib(int is_server){
     
     int ret=0;
     
     memset(&ib_res, 0, sizeof(struct IBRes));
     
+    int num_dev;
     struct ibv_device **dev_list=NULL;
-    dev_list=ibv_get_device_list(NULL);
+    dev_list=ibv_get_device_list(&num_dev);
     check(dev_list, "Failed to get ib device list.");
     
     ib_res.ctx=ibv_open_device(*dev_list);
@@ -71,21 +77,24 @@ int setup_ib(){
     check(ib_res.cq, "Failed to create cq.");
     
     struct ibv_qp_init_attr qp_init_attr={
+        .qp_context=NULL,
         .send_cq=ib_res.cq,
         .recv_cq=ib_res.cq,
         .cap={
-            .max_send_wr=ib_res.dev_attr.max_qp_wr,
-            .max_recv_wr=ib_res.dev_attr.max_qp_wr,
+            .max_send_wr=48,
+            .max_recv_wr=48,
             .max_send_sge=1,
             .max_recv_sge=1,
+            .max_inline_data=4,
         },
         .qp_type=IBV_QPT_RC,
+        .sq_sig_all=1,
     };
     
     ib_res.qp=ibv_create_qp(ib_res.pd, &qp_init_attr);
     check(ib_res.qp, "Failed to create qp.");
     
-    ret=connect_qp_server();
+    ret=is_server?connect_qp_server():connect_qp_client();
     check(ret==0, "Failed to connect qp");
     
     ibv_free_device_list(dev_list);
@@ -108,7 +117,7 @@ int connect_qp_server(){
     
     struct sockaddr_in remote_addr;
     socklen_t sin_size=sizeof(struct sockaddr_in);
-    if((client_fd=accept(server_fd, (struct sockaddr *)&remote_addr, sin_size))<=0){
+    if((client_fd=accept(server_fd, (struct sockaddr *)&remote_addr, &sin_size))<=0){
         perror("Failed to accept client.");
         goto error;
     }
@@ -124,10 +133,12 @@ int connect_qp_server(){
     ret=sock_send_qp_info(client_fd, &local_qp_info);
     check(ret==0, "Failed to send server qp info.");
     
+    printf("rs server\n");
+    
     ret=modify_qp_to_rts(ib_res.qp, remote_qp_info.qp_num, remote_qp_info.lid);
     check(ret==0, "Failed to modify qp to rts.");
     
-    char sync_buf[]={'s','y','n','c','\0'}
+    char sync_buf[]={'s','y','n','c','\0'};
     //sync_server
     ret=Recv_n(client_fd, sync_buf, sizeof(SOCK_SYNC_MSG));
     check(ret==sizeof(SOCK_SYNC_MSG), "Failed to recv sync from client.");
@@ -171,13 +182,15 @@ int connect_qp_client(){
     
     ret=sock_send_qp_info(client_fd, &local_qp_info);
     check(ret==0, "Failed to send client qp info.");
-    ret=sock_send_qp_info(client_fd, &remote_qp_info);
+    ret=sock_recv_qp_info(client_fd, &remote_qp_info);
     check(ret==0, "Failed to recv client qp info.");
+    
+    printf("sr client\n");
     
     ret=modify_qp_to_rts(ib_res.qp, remote_qp_info.qp_num, remote_qp_info.lid);
     check(ret==0, "Failed to modify qp to rts.");
     
-    char sync_buf[]={'s','y','n','c','\0'}
+    char sync_buf[]={'s','y','n','c','\0'};
     //sync_server
     ret=Recv_n(client_fd, sync_buf, sizeof(SOCK_SYNC_MSG));
     check(ret==sizeof(SOCK_SYNC_MSG), "Failed to recv sync from client.");

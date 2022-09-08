@@ -1,7 +1,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdio.h>
 
 struct sockaddr_in Get_addr(in_addr_t inaddr, in_port_t inport);
 

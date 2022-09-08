@@ -2,16 +2,11 @@
 #include "ib.h"
 #include "setup_ib.h"
 #include <string.h>
+#include <stdlib.h>
 
 const size_t NUM_MSGS=1000000u;
 
 int run_client(){
-    
-    unsigned long long cksum, flen;
-    check(Gen_cksum(fname, &cksum, &flen), "Gen_cksum failed!");
-    
-    FILE *pFile=fopen(fname, "rb");
-    check(pFile, "fopen failed!");
     
     int ret=0, n;
     
@@ -29,7 +24,7 @@ int run_client(){
     char *buf_ptr=ib_res.ib_buf;
     
     for(size_t i=0u;i<NUM_MSGS;++i){
-        ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
+        ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, MSG_REGULAR, qp, buf_ptr);
         check(ret==0, "Failed to post recv");
         for(int flag=1;flag;){
             n=ibv_poll_cq(cq, num_wc, wc);
@@ -54,24 +49,15 @@ error:
     return -1;
 }
 
-int main(int argc, char *argv[]){
-    
-    if(argc!=3){
-        fprintf(stderr, "arg error!\n");
-        return -1;
-    }
-    
-    if(strlen(argv[2])>32){
-        fprintf(stderr, "target file name too long!\n");
-        return -1;
-    }
+int main(){
     
     int ret=0;
     
-    ret=setup_ib();
+    ret=setup_ib(0);
     check(ret==0, "Failed to setup IB.");
+    printf("setup_ib OK");
     
-    ret=run_client(argv[1], argv[2]);
+    ret=run_client();
     check(ret==0, "Failed to run client.");
     
 error:

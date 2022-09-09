@@ -22,11 +22,6 @@ static inline uint64_t ntohll (uint64_t x) {return x; }
 #error __BYTE_ORDER is neither __LITTLE_ENDIAN nor __BIG_ENDIAN
 #endif
 
-struct QPInfo{
-    uint16_t lid;
-    uint32_t qp_num;
-};
-
 enum MsgType{
     MSG_REGULAR=0,
     MSG_SUCCESS,

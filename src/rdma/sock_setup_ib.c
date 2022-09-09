@@ -50,6 +50,9 @@ int setup_ib(int is_server){
     dev_list=ibv_get_device_list(&num_dev);
     check(dev_list, "Failed to get ib device list.");
     
+    for(int i=0;i<num_dev;++i)
+        printf("RDMA device[%d]: name=%s\n", i, ibv_get_device_name(dev_list[i]));
+    
     ib_res.ctx=ibv_open_device(*dev_list);
     check(ib_res.ctx, "Failed to open ib device");
     

@@ -3,6 +3,11 @@
 extern const size_t MSG_SIZE;
 extern const size_t CUR_MSGS;
 
+struct QPInfo{
+    union ibv_gid gid;
+    uint32_t qp_num;
+};
+
 struct IBRes{
     
     struct ibv_context *ctx;

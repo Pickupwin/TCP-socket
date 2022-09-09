@@ -6,7 +6,7 @@ SRCS=server.c client.c
 OBJS=$(patsubst %.c,%,$(SRCS))
 OUT_DIR=../../build
 
-all: $(OBJS)
+all: $(OBJS) $(ADDS) $(OUT_DIR)
 
-$(OBJS):$(SRCS) $(ADDS) $(OUT_DIR)
-	gcc $< $(ADDS) -o $(OUT_DIR)/$@ $(LIBS)
+$(OBJS):%:%.c
+	gcc $^ $(ADDS) -o $(OUT_DIR)/$@ $(LIBS)

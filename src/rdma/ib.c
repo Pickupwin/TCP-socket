@@ -4,9 +4,11 @@
 #include "debug.h"
 
 
-int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
+int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, union ibv_gid gid){
     
-    printf("qp_num=%u, lid=%u\n", qp_num, lid);
+    printf("qp_num=%u, gid=%llu,%llu\n", qp_num, gid.global.subnet_prefix, gid.global.interface_id);
+    for(int i=0;i<16;++i)   printf("%u ", gid.raw[i]);
+    puts("");
     
     int ret=0;
     
@@ -29,7 +31,7 @@ int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
         check(ret==0, "Failed to modify qp to INIT");
         
     }
-    
+    puts("INIT Done.");
     
     {
         //RTR
@@ -40,11 +42,16 @@ int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
             .rq_psn=0,
             .max_dest_rd_atomic=1,
             .min_rnr_timer=12,
-            .ah_attr.is_global=0,
-            .ah_attr.dlid=lid,
-            .ah_attr.sl=IB_SL,
-            .ah_attr.src_path_bits=0,
-            .ah_attr.port_num=IB_PORT,
+            .ah_attr={
+                .is_global=1,
+                .port_num=IB_PORT,
+                .grh={
+                    .sgid_index=GID_INDEX,
+                    .dgid=gid,
+                    .flow_label=0,
+                    .traffic_class=0,
+                }
+            }
         };
         
         ret=ibv_modify_qp(qp, &qp_attr,
@@ -54,6 +61,7 @@ int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
                         IBV_QP_MIN_RNR_TIMER);
         check(ret==0, "Failed to change qp to rtr.");
     }
+    puts("RTR Done.");
     
     {
         //RTS
@@ -73,6 +81,7 @@ int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid){
                         IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC);
         check(ret==0, "Failed to modify qp to RTS.");
     }
+    puts("RTS Done.");
     
     return 0;
 

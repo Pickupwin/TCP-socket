@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-const size_t NUM_MSGS=1000000u;
+const size_t NUM_MSGS=1000u;
 
 int run_client(){
     
@@ -23,9 +23,13 @@ int run_client(){
     
     char *buf_ptr=ib_res.ib_buf;
     
+    struct timeval start, end;
+    
+    gettimeofday(&start, NULL);
+    
     for(size_t i=0u;i<NUM_MSGS;++i){
         ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, MSG_REGULAR, qp, buf_ptr);
-        check(ret==0, "Failed to post recv");
+        check(ret==0, "Failed to post send");
         for(int flag=1;flag;){
             n=ibv_poll_cq(cq, num_wc, wc);
             check(n>=0, "Failed to poll cq");
@@ -39,6 +43,26 @@ int run_client(){
             }
         }
     }
+    // for(size_t i=0u;i<NUM_MSGS;++i){
+    //     ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, MSG_REGULAR, qp, buf_ptr);
+    //     check(ret==0, "Failed to post send");
+    // }
+    
+    // for(size_t i=0u;i<NUM_MSGS;){
+    //     n=ibv_poll_cq(cq, num_wc, wc);
+    //     check(n>=0, "Failed to poll cq");
+    //     for(int j=0;j<n;++j){
+    //         check(wc[j].status==IBV_WC_SUCCESS, "failed wc");
+    //         if(wc[j].opcode==IBV_WC_SEND){
+    //             ++i;
+    //         }
+    //     }
+    // }
+    
+    gettimeofday(&end, NULL);
+    
+    printf("start: %d.%d\n", start.tv_sec, start.tv_usec);
+    printf("end  : %d.%d\n", end.tv_sec, end.tv_usec);
     
     
     free(wc);
@@ -55,7 +79,7 @@ int main(){
     
     ret=setup_ib(0);
     check(ret==0, "Failed to setup IB.");
-    printf("setup_ib OK");
+    printf("setup_ib OK\n");
     
     ret=run_client();
     check(ret==0, "Failed to run client.");

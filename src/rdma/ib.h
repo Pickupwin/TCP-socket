@@ -9,6 +9,7 @@
 
 #define IB_MTU IBV_MTU_4096
 #define IB_PORT 1
+#define GID_INDEX 3
 #define IB_SL 0
 
 
@@ -28,7 +29,7 @@ enum MsgType{
     MSG_FAILED,
 };
 
-int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, uint16_t lid);
+int modify_qp_to_rts(struct ibv_qp *qp, uint32_t qp_num, union ibv_gid gid);
 
 int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp, char *buf);
 

@@ -3,7 +3,7 @@ AIM=$(patsubst %.c,%,$(SRC))
 LIBS=-lpcap
 OUT_DIR=../../build
 
-ALL:$(AIM)
+ALL:$(AIM) $(SRC)
 
-$(AIM):$(SRC) $(OUT_DIR)
-	gcc $< -o $(OUT_DIR)/$@ $(LIBS)
+$(AIM):%:%.c $(OUT_DIR)
+	gcc $^ -o $(OUT_DIR)/$@ $(LIBS)

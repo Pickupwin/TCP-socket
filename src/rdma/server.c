@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-const size_t NUM_MSGS=100000u;
+const size_t NUM_MSGS=1000u;
 
 int run_server(){
     
@@ -55,43 +55,43 @@ int run_server(){
     //     }
     // }
     
-    // for(size_t i=0u;i<NUM_MSGS;++i){
-    //     ret=post_recv(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
-    //     check(ret==0, "Failed to post recv");
-    // }
+    for(size_t i=0u;i<NUM_MSGS;++i){
+        ret=post_recv(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
+        check(ret==0, "Failed to post recv");
+    }
     
-    // for(size_t i=0u;i<NUM_MSGS;){
-    //     n=ibv_poll_cq(cq, num_wc, wc);
-    //     check(n>=0, "Failed to poll cq");
-    //     for(int j=0;j<n;++j){
-    //         check(wc[j].status==IBV_WC_SUCCESS, "failed wc");
-    //         if(wc[j].opcode==IBV_WC_RECV){
-    //             ++i;
-    //         }
-    //     }
-    // }
-    
-    for(size_t i=0u;i<MSG_SIZE;++i) buf_ptr[i]='A';
-    
-    ret=post_recv(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
-    check(ret==0, "Failed to post recv");
-    
-    ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, MSG_REGULAR, qp, buf_ptr);
-    check(ret==0, "Failed to post send");
-    
-    for(size_t i=0u;i<2u;){
+    for(size_t i=0u;i<NUM_MSGS;){
         n=ibv_poll_cq(cq, num_wc, wc);
         check(n>=0, "Failed to poll cq");
         for(int j=0;j<n;++j){
-            check(wc[j].status==IBV_WC_SUCCESS, "Got failed wc");
-            i+=(wc[j].opcode==IBV_WC_RECV || wc[j].opcode==IBV_WC_SEND);
-            printf("poll %d opcode:%u (IBV_WC_RECV=%u, IBV_WC_SEND=%u)\n", j, wc[j].opcode, IBV_WC_RECV, IBV_WC_SEND);
+            check(wc[j].status==IBV_WC_SUCCESS, "failed wc");
             if(wc[j].opcode==IBV_WC_RECV){
-                for(size_t t=0u;t<10u;++t)  printf("%c", ((char *)wc[j].wr_id)[t]);
-                puts("");
+                ++i;
             }
         }
     }
+    
+    // for(size_t i=0u;i<MSG_SIZE;++i) buf_ptr[i]='A';
+    
+    // ret=post_recv(MSG_SIZE, lkey, (uint64_t)buf_ptr, qp, buf_ptr);
+    // check(ret==0, "Failed to post recv");
+    
+    // ret=post_send(MSG_SIZE, lkey, (uint64_t)buf_ptr, MSG_REGULAR, qp, buf_ptr);
+    // check(ret==0, "Failed to post send");
+    
+    // for(size_t i=0u;i<2u;){
+    //     n=ibv_poll_cq(cq, num_wc, wc);
+    //     check(n>=0, "Failed to poll cq");
+    //     for(int j=0;j<n;++j){
+    //         check(wc[j].status==IBV_WC_SUCCESS, "Got failed wc");
+    //         i+=(wc[j].opcode==IBV_WC_RECV || wc[j].opcode==IBV_WC_SEND);
+    //         printf("poll %d opcode:%u (IBV_WC_RECV=%u, IBV_WC_SEND=%u)\n", j, wc[j].opcode, IBV_WC_RECV, IBV_WC_SEND);
+    //         if(wc[j].opcode==IBV_WC_RECV){
+    //             for(size_t t=0u;t<10u;++t)  printf("%c", ((char *)wc[j].wr_id)[t]);
+    //             puts("");
+    //         }
+    //     }
+    // }
     
     
     gettimeofday(&end, NULL);

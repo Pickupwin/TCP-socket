@@ -1,0 +1,15 @@
+
+
+
+
+bfshell - bfrt_python - bfrt - l2_forward(name of p4) - pipe - Ingress.eth_forward
+
+
+0000   b8 ce f6 83 b2 ea                                 ......
+0000   08 c0 eb 33 31 74                                 ...31t
+
+
+0xb8cef683b2ea
+
+add_with_sendto(dst_addr=0xb8cef683b2ea, port=184)  2.1
+add_with_sendto(dst_addr=0x08c0eb333174, port=188)  1.3

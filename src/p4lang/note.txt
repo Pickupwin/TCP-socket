@@ -13,3 +13,13 @@ bfshell - bfrt_python - bfrt - l2_forward(name of p4) - pipe - Ingress.eth_forwa
 
 add_with_sendto(dst_addr=0xb8cef683b2ea, port=184)  2.1
 add_with_sendto(dst_addr=0x08c0eb333174, port=188)  1.3
+
+mirror.session_create(
+    mirror.MirrorSessionInfo_t(
+        mir_type=mirror.MirrorType_e.PD_MIRROR_TYPE_NORM,
+        direction=mirror.Direction_e.PD_DIR_BOTH,
+        mir_id=5,
+        egr_port=188, egr_port_v=True,
+        max_pkt_len=16384
+    )
+)

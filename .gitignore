@@ -1,4 +1,5 @@
 tmp/*
 build/*
 tests/*
+pcaps/*
 .vscode

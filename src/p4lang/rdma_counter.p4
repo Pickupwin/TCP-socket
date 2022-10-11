@@ -152,7 +152,7 @@ control Ingress(
     };
     action ing_mirror(MirrorId_t mirror_session){
         ig_dprsr_md.mirror_type=ING_MIRROR;
-        md.mir_sess=mirror_session;
+        md.mir_sess=mirror_session;     //const
         md.mir_hdr_type=MIRROR_HEADER_TYPE;
         md.tstamp=ig_prsr_md.global_tstamp;
     }
@@ -166,7 +166,7 @@ control Ingress(
         size=16;
     }
     apply{
-        if(md.is_rdma==1){
+        if(md.is_rdma==1){  //rocev2
             if(rdma_mod_incr.execute()==1){
                 drop();
             }
@@ -274,7 +274,7 @@ control Egress(
     apply{
         if(metadata.is_mirror==1){
             hdr.eth_hdr.src_addr=metadata.tstamp;
-            hdr.eth_hdr.dst_addr=MIRROR_TARGET_MAC;
+            hdr.eth_hdr.dst_addr=MIRROR_TARGET_MAC; //tcpdump sniffer.
         }
     }
 }

@@ -14,8 +14,8 @@ eth_forward.add_with_sendto(dst_addr=0xb8cef683b2ea, port=184)
 eth_forward.add_with_sendto(dst_addr=0x08c0eb333174, port=188)
 
 ing_mirror_table=p4.Ingress.ing_mirror_table
-# ing_mirror_table.add_with_ing_mirror(ingress_port=184, mirs=5)
-ing_mirror_table.add_with_ing_mirror(ingress_port=188, mirs=5)
+ing_mirror_table.add_with_NoAction(src_addr=0xb8cef683b2ea, dst_addr=0x08c0eb333174)
+ing_mirror_table.add_with_NoAction(src_addr=0x08c0eb333174, dst_addr=0xb8cef683b2ea)
 
 def run_pd_rpc(cmd_or_code, no_print=False):
     import subprocess

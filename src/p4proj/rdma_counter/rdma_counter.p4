@@ -1,27 +1,58 @@
 #include <core.p4>
 #include <tna.p4>
 
-// const bit<48> MIRROR_TARGET_MAC = 0x08c0eb333174;   //188 1.3
-const bit<48> MIRROR_TARGET_MAC = 0xb8cef683b2ea;   //184 2.1
-
 header ethernet_h{
     bit<48> dst_addr;
     bit<48> src_addr;
     bit<16> ether_type;
 }
 
+header ipv4_h{
+    bit<4> version;
+    bit<4> hdr_len;
+    bit<8> diff_serv;
+    bit<16> tot_len;
+    bit<16> identify;
+    bit<3> flags;
+    bit<13> frag_off;
+    bit<8> ttl;
+    bit<8> protocol;
+    bit<16> checksum;
+    bit<32> src_addr;
+    bit<32> dst_addr;
+}
+
+header udp_h{
+    bit<16> src_port;
+    bit<16> dst_port;
+    bit<16> pkt_len;
+    bit<16> checksum;
+}
+
+header BTH_h{
+    bit<8> op_code;
+    bit<24> murmur24;
+    bit<8> reserve8;
+    bit<24> dst_qp;
+    bit<1> ack_req;
+    bit<7> reserve7;
+    bit<24> psn;
+}
+
 struct ingress_headers_t{
-    ethernet_h ethernet;
+    ethernet_h eth_hdr;
+    ipv4_h ipv4_hdr;
+    udp_h udp_hdr;
+    BTH_h bth_hdr;
 }
 
 struct ingress_metadata_t{
-    MirrorId_t mirror_session;
-    bit<8> mir_hdr_type;
+    bit<1> is_rdma;
 }
 
 parser IngressParser(
     packet_in pkt,
-    out ingress_headers_t hdr,
+    out ingress_headers_t hdrs,
     out ingress_metadata_t md,
     out ingress_intrinsic_metadata_t ig_intr_md
 ){
@@ -29,8 +60,7 @@ parser IngressParser(
         transition init_meta;
     }
     state init_meta{
-        md.mirror_session=0;
-        md.mir_hdr_type=0;
+        md.is_rdma=0;
         transition parse_start;
     }
     state parse_start{
@@ -39,21 +69,39 @@ parser IngressParser(
         transition parse_ethernet;
     }
     state parse_ethernet{
-        pkt.extract(hdr.ethernet);
+        pkt.extract(hdrs.eth_hdr);
+        transition select(hdrs.eth_hdr.ether_type){
+            0x0800: parse_ipv4;
+            default: other_accept;
+        }
+    }
+    state parse_ipv4{
+        pkt.extract(hdrs.ipv4_hdr);
+        transition select(hdrs.ipv4_hdr.protocol){
+            0x11: parse_udp;
+            default: other_accept;
+        }
+    }
+    state parse_udp{
+        pkt.extract(hdrs.udp_hdr);
+        transition select(hdrs.udp_hdr.dst_port){
+            4791: parse_rroce;
+            default: other_accept;
+        }
+    }
+    state parse_rroce{
+        pkt.extract(hdrs.bth_hdr);
+        md.is_rdma=1;
+        transition accept;
+    }
+    state other_accept{
         transition accept;
     }
 }
 
-const bit<3> ING_MIRROR = 7;
-const bit<8> MIRROR_HEADER_TYPE = 0xA2;
-
-header mirror_h{
-    bit<8> header_type;
-}
-
 control Ingress(
     inout ingress_headers_t hdr,
-    inout ingress_metadata_t metadata,
+    inout ingress_metadata_t md,
     in ingress_intrinsic_metadata_t ig_intr_md,
     in ingress_intrinsic_metadata_from_parser_t ig_prsr_md,
     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
@@ -67,33 +115,33 @@ control Ingress(
     }
     table eth_forward{
         key={
-            hdr.ethernet.dst_addr:exact;
+            hdr.eth_hdr.dst_addr:exact;
         }
         actions={
             sendto;
         }
-        size=16;    // capacity of entrys.
+        size=16;    // capacity of entries;
     }
-    action ing_mirror(MirrorId_t mirs){
-        ig_dprsr_md.mirror_type=ING_MIRROR;
-        metadata.mirror_session=mirs;
-        metadata.mir_hdr_type=MIRROR_HEADER_TYPE;
-    }
-    action NoAction(){}
-    table ing_mirror_table{
-        key={
-            hdr.ethernet.src_addr:exact;
-            hdr.ethernet.dst_addr:exact;
+    #define RDMA_MOD 20
+    DirectRegister<bit<8>>(1) rdma_mod;
+    DirectRegisterAction<bit<8>,bit<1>>(rdma_mod) rdma_mod_incr={
+        void apply(inout bit<8> data, out bit<1> ret){
+            if(data>=RDMA_MOD){
+                ret=1;
+                data=1;
+            }
+            else{
+                ret=0;
+                data=data+1;
+            }
         }
-        actions={
-            ing_mirror;
-            NoAction;
-        }
-        size=16;
-        default_action=ing_mirror(5);
-    }
+    };
     apply{
-        ing_mirror_table.apply();
+        if(md.is_rdma==1){  //rocev2
+            if(rdma_mod_incr.execute()==1){
+                drop();
+            }
+        }
         if(!eth_forward.apply().hit){
             if(ig_intr_md.ingress_port==188){
                 ig_tm_md.ucast_egress_port=184;
@@ -114,27 +162,13 @@ control IngressDeparser(
     in ingress_metadata_t md,
     in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md
 ){
-    Mirror() ing_mirror;
     apply{
-        if(ig_dprsr_md.mirror_type==ING_MIRROR){
-            ing_mirror.emit<mirror_h>(
-                md.mirror_session,
-                {
-                    md.mir_hdr_type
-                }
-            );
-        }
         pkt.emit(hdr);
     }
 }
 
-struct egress_headers_t{
-    ethernet_h eth_hdr;
-}
-
-struct egress_metadata_t{
-    bit<1> is_mirror;
-}
+struct egress_headers_t{}
+struct egress_metadata_t{}
 
 parser EgressParser(
     packet_in pkt,
@@ -142,31 +176,14 @@ parser EgressParser(
     out egress_metadata_t md,
     out egress_intrinsic_metadata_t eg_intr_md
 ){
-    mirror_h tmp_mir_hdr;
     state start{
         transition init_meta;
     }
     state init_meta{
-        md.is_mirror=0;
         transition parse_start;
     }
     state parse_start{
         pkt.extract(eg_intr_md);
-        tmp_mir_hdr=pkt.lookahead<mirror_h>();
-        transition select(tmp_mir_hdr.header_type){
-            MIRROR_HEADER_TYPE:
-                parse_mirror;
-            default:
-                parse_ethernet;
-        }
-    }
-    state parse_mirror{
-        pkt.extract(tmp_mir_hdr);
-        md.is_mirror=1;
-        transition parse_ethernet;
-    }
-    state parse_ethernet{
-        pkt.extract(hdr.eth_hdr);
         transition accept;
     }
 }
@@ -180,10 +197,6 @@ control Egress(
     inout egress_intrinsic_metadata_for_output_port_t eg_op_md
 ){
     apply{
-        if(metadata.is_mirror==1){
-            // hdr.eth_hdr.src_addr=hdr.eth_hdr.dst_addr;
-            // hdr.eth_hdr.dst_addr=MIRROR_TARGET_MAC;
-        }
     }
 }
 

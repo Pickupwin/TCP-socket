@@ -3,3 +3,4 @@ build/*
 tests/*
 pcaps/*
 .vscode
+example

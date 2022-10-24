@@ -1,6 +1,7 @@
 
 import os
 import sys
+import time
 
 sys.path.append("{}/lib/python2.7/site-packages/tofino".format(os.environ["SDE_INSTALL"]))
 
@@ -11,7 +12,7 @@ from scapy.all import Ether
 
 grpc_addr = "localhost:50052"
 p4_name = "su_pktgen"
-timer_app_id = 5
+timer_app_id = 1
 
 def make_port(pipe, local_port):
     return (pipe << 7) | local_port
@@ -43,6 +44,10 @@ if __name__ == "__main__":
     out_port = 188
     
     my_pkt = Ether(
+        # port 188
+        # dst = '08:c0:eb:33:31:74',
+        # port 184
+        # dst = 'b8:ce:f6:83:b2:ea',
         dst = '00:01:02:03:04:05',
         src = '00:06:07:08:09:0a',
         type = 0x88cc
@@ -89,6 +94,24 @@ if __name__ == "__main__":
         [pktgen_app_cfg_data]
     )
 
+    resp = pktgen_app_cfg_table.entry_get(
+        target,
+        [pktgen_app_cfg_table.make_key(
+            [gc.KeyTuple('app_id', timer_app_id)]
+        )],
+        {"from_hw": True},
+        pktgen_app_cfg_table.make_data([
+            gc.DataTuple('batch_counter'),
+            gc.DataTuple('pkt_counter'),
+            gc.DataTuple('trigger_counter')
+        ], '$PKTGEN_TRIGGER_TIMER_ONE_SHOT', get=True)
+    )
+    data_dict = next(resp)[0].to_dict()
+    tri_value = data_dict["trigger_counter"]
+    batch_value = data_dict["batch_counter"]
+    pkt_value = data_dict["pkt_counter"]
+    print(tri_value, batch_value, pkt_value)
+
     pktgen_pkt_buffer_table.entry_add(
         target,
         [pktgen_pkt_buffer_table.make_key([
@@ -110,3 +133,23 @@ if __name__ == "__main__":
             '$PKTGEN_TRIGGER_TIMER_ONE_SHOT'
         )]
     )
+
+    time.sleep(0.01)
+
+    resp = pktgen_app_cfg_table.entry_get(
+        target,
+        [pktgen_app_cfg_table.make_key(
+            [gc.KeyTuple('app_id', timer_app_id)]
+        )],
+        {"from_hw": True},
+        pktgen_app_cfg_table.make_data([
+            gc.DataTuple('batch_counter'),
+            gc.DataTuple('pkt_counter'),
+            gc.DataTuple('trigger_counter')
+        ], '$PKTGEN_TRIGGER_TIMER_ONE_SHOT', get=True)
+    )
+    data_dict = next(resp)[0].to_dict()
+    tri_value = data_dict["trigger_counter"]
+    batch_value = data_dict["batch_counter"]
+    pkt_value = data_dict["pkt_counter"]
+    print(tri_value, batch_value, pkt_value)

@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <tna.p4>
 
-const bit<3> PKTGEN_APP_ID = 5;
+const bit<3> PKTGEN_APP_ID = 1;
 
 struct pktgen_base_header_t{
     bit<3> _pad1;
@@ -60,16 +60,16 @@ control Ingress(
     };
     apply{
         
-        if(ig_intr_md.ingress_port==188){
-            ig_tm_md.ucast_egress_port=184;
-        }
         if(ig_intr_md.ingress_port==184){
             ig_tm_md.ucast_egress_port=188;
+        }
+        if(ig_intr_md.ingress_port==188){
+            ig_tm_md.ucast_egress_port=184;
         }
 
         if(md.is_timer==1){
             timer_cnt_incr.execute();
-            ig_tm_md.ucast_egress_port=188;
+            ig_tm_md.ucast_egress_port=184;
         }
     }
 }
